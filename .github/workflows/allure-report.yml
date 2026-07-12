@@ -13,12 +13,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Java
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -28,34 +28,55 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Verify Gradle
-        run: gradle -v
-
-      - name: Run Reporting Tests
+      - name: Run reporting task
         working-directory: Shopkart_Project
         run: gradle reporting --no-configuration-cache
 
-      - name: Copy Allure Environment
+      - name: Copy Allure environment
         if: always()
         run: |
           mkdir -p Shopkart_Project/build/allure-results
           cp Shopkart_Project/src/test/resources/environment.properties \
-             Shopkart_Project/build/allure-results/environment.properties
+            Shopkart_Project/build/allure-results/environment.properties
 
-      - name: Generate Allure Report
+      - name: Create gh-pages branch if it does not exist
+        if: always()
+        run: |
+          git fetch origin
+
+          if ! git ls-remote --exit-code --heads origin gh-pages; then
+            git checkout --orphan gh-pages
+            git rm -rf . || true
+            echo "# GitHub Pages" > README.md
+            git add README.md
+            git -c user.name="github-actions" \
+                -c user.email="github-actions@github.com" \
+                commit -m "Initialize gh-pages"
+            git push origin gh-pages
+          fi
+
+          git checkout ${{ github.ref_name }}
+
+      - name: Checkout gh-pages
+        if: always()
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Generate Allure report
         if: always()
         uses: simple-elf/allure-report-action@master
         with:
+          gh_pages: gh-pages
+          allure_history: allure-history
           allure_results: Shopkart_Project/build/allure-results
           allure_report: allure-report
-          gh_pages: .
-          allure_history: allure-history
 
-      - name: Deploy to GitHub Pages
+      - name: Publish report
         if: always()
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: allure-history
-          force_orphan: true
