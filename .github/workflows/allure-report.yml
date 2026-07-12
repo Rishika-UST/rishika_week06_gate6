@@ -42,27 +42,20 @@ jobs:
           cp Shopkart_Project/src/test/resources/environment.properties \
              Shopkart_Project/build/allure-results/environment.properties
 
-      - name: Checkout gh-pages branch
-        if: always()
-        continue-on-error: true
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: gh-pages
-
       - name: Generate Allure Report
         if: always()
         uses: simple-elf/allure-report-action@master
         with:
-          gh_pages: gh-pages
-          allure_history: allure-history
           allure_results: Shopkart_Project/build/allure-results
           allure_report: allure-report
+          gh_pages: .
+          allure_history: allure-history
 
-      - name: Deploy Report to GitHub Pages
+      - name: Deploy to GitHub Pages
         if: always()
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: allure-history
+          force_orphan: true
